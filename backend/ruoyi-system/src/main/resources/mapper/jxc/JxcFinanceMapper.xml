@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.jxc.mapper.JxcFinanceMapper">
+
+    <!-- ==================== 收付款单 ==================== -->
+    <insert id="insertPayment" parameterType="com.ruoyi.jxc.domain.JxcPayment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO jxc_payment
+            (pay_no, target_type, target_id, pay_date, amount, pay_type, status, audit_by, audit_time, create_by, create_time, remark)
+        VALUES
+            (#{payNo}, #{targetType}, #{targetId}, #{payDate}, #{amount}, #{payType}, '1', #{createBy}, sysdate(), #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <insert id="insertPaymentItem" parameterType="com.ruoyi.jxc.domain.JxcPaymentItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO jxc_payment_item
+            (payment_id, row_no, bill_type, bill_id, writeoff_amount, create_by, create_time, remark)
+        VALUES
+            (#{paymentId}, #{rowNo}, #{billType}, #{billId}, #{writeoffAmount}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <select id="selectPaymentList" resultType="java.util.LinkedHashMap">
+        SELECT
+            p.id, p.pay_no AS payNo, p.target_type AS targetType, p.target_id AS targetId,
+            CASE WHEN p.target_type = '1' THEN s.supplier_name ELSE m.member_name END AS targetName,
+            p.pay_date AS payDate, p.amount, p.pay_type AS payType, p.status,
+            p.create_by AS createBy, p.create_time AS createTime, p.remark
+        FROM jxc_payment p
+        LEFT JOIN jxc_supplier s ON p.target_type = '1' AND p.target_id = s.id
+        LEFT JOIN jxc_member m ON p.target_type = '2' AND p.target_id = m.id
+        <where>
+            <if test="payNo != null and payNo != ''">
+                AND p.pay_no LIKE CONCAT('%', #{payNo}, '%')
+            </if>
+            <if test="targetType != null and targetType != ''">
+                AND p.target_type = #{targetType}
+            </if>
+            <if test="targetId != null">
+                AND p.target_id = #{targetId}
+            </if>
+        </where>
+        ORDER BY p.id DESC
+    </select>
+
+    <select id="selectPaymentById" resultType="com.ruoyi.jxc.domain.JxcPayment">
+        SELECT id, pay_no AS payNo, target_type AS targetType, target_id AS targetId, pay_date AS payDate,
+               amount, pay_type AS payType, status, create_by AS createBy, create_time AS createTime, remark
+        FROM jxc_payment WHERE id = #{id}
+    </select>
+
+    <select id="selectPaymentItemsByPaymentId" resultType="com.ruoyi.jxc.domain.JxcPaymentItem">
+        SELECT i.id, i.payment_id AS paymentId, i.row_no AS rowNo, i.bill_type AS billType, i.bill_id AS billId,
+               i.writeoff_amount AS writeoffAmount,
+               CASE WHEN i.bill_type = '1' THEN pay.source_no ELSE rec.source_no END AS billNo
+        FROM jxc_payment_item i
+        LEFT JOIN jxc_payable pay ON i.bill_type = '1' AND i.bill_id = pay.id
+        LEFT JOIN jxc_receivable rec ON i.bill_type = '2' AND i.bill_id = rec.id
+        WHERE i.payment_id = #{paymentId}
+        ORDER BY i.row_no
+    </select>
+
+    <!-- ==================== 往来台账 ==================== -->
+    <select id="selectPayableById" resultType="java.util.LinkedHashMap">
+        SELECT id, supplier_id AS supplierId, source_no AS sourceNo, amount, paid_amount AS paidAmount, balance, status
+        FROM jxc_payable WHERE id = #{id}
+    </select>
+
+    <select id="selectReceivableById" resultType="java.util.LinkedHashMap">
+        SELECT id, member_id AS memberId, source_no AS sourceNo, amount, paid_amount AS paidAmount, balance, status
+        FROM jxc_receivable WHERE id = #{id}
+    </select>
+
+    <!-- 应付核销：原子更新（balance >= 核销额才生效），状态 0未核销 1部分 2已核销 -->
+    <!-- 注意：MySQL UPDATE 的 SET 从左到右求值，status 必须在 balance 之前计算（否则会用到更新后的 balance 造成重复扣减误判） -->
+    <update id="writeoffPayable">
+        UPDATE jxc_payable
+        SET status      = CASE WHEN balance - #{writeoffAmount} &lt;= 0 THEN '2' ELSE '1' END,
+            paid_amount = paid_amount + #{writeoffAmount},
+            balance     = balance - #{writeoffAmount},
+            update_by   = #{operName},
+            update_time = sysdate()
+        WHERE id = #{id} AND balance &gt;= #{writeoffAmount}
+    </update>
+
+    <update id="writeoffReceivable">
+        UPDATE jxc_receivable
+        SET status      = CASE WHEN balance - #{writeoffAmount} &lt;= 0 THEN '2' ELSE '1' END,
+            paid_amount = paid_amount + #{writeoffAmount},
+            balance     = balance - #{writeoffAmount},
+            update_by   = #{operName},
+            update_time = sysdate()
+        WHERE id = #{id} AND balance &gt;= #{writeoffAmount}
+    </update>
+
+    <select id="selectPayableList" resultType="java.util.LinkedHashMap">
+        SELECT p.id, p.supplier_id AS supplierId, s.supplier_name AS supplierName,
+               p.source_no AS sourceNo, p.source_type AS sourceType,
+               p.amount, p.paid_amount AS paidAmount, p.balance, p.status, p.create_time AS createTime
+        FROM jxc_payable p
+        LEFT JOIN jxc_supplier s ON p.supplier_id = s.id
+        <where>
+            <if test="supplierId != null">AND p.supplier_id = #{supplierId}</if>
+            <if test="status != null and status != ''">AND p.status = #{status}</if>
+        </where>
+        ORDER BY p.id DESC
+    </select>
+
+    <select id="selectReceivableList" resultType="java.util.LinkedHashMap">
+        SELECT r.id, r.member_id AS memberId, m.member_name AS memberName, m.phone,
+               r.source_no AS sourceNo, r.source_type AS sourceType,
+               r.amount, r.paid_amount AS paidAmount, r.balance, r.status, r.create_time AS createTime
+        FROM jxc_receivable r
+        LEFT JOIN jxc_member m ON r.member_id = m.id
+        <where>
+            <if test="memberId != null">AND r.member_id = #{memberId}</if>
+            <if test="status != null and status != ''">AND r.status = #{status}</if>
+        </where>
+        ORDER BY r.id DESC
+    </select>
+
+    <select id="selectUnsettledPayable" resultType="java.util.LinkedHashMap">
+        SELECT id, source_no AS sourceNo, source_type AS sourceType, amount, paid_amount AS paidAmount, balance, status, create_time AS createTime
+        FROM jxc_payable
+        WHERE supplier_id = #{supplierId} AND balance &gt; 0 AND status != '2'
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectUnsettledReceivable" resultType="java.util.LinkedHashMap">
+        SELECT id, source_no AS sourceNo, source_type AS sourceType, amount, paid_amount AS paidAmount, balance, status, create_time AS createTime
+        FROM jxc_receivable
+        WHERE member_id = #{memberId} AND balance &gt; 0 AND status != '2'
+        ORDER BY id ASC
+    </select>
+
+</mapper>
