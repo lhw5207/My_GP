@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.jxc.mapper.JxcReportMapper">
+
+    <!-- 销售日报（按天聚合。毛利 = 销售额 - 成本，成本取明细成本快照 cost_amount，个别计价） -->
+    <select id="selectSaleDaily" resultType="java.util.LinkedHashMap">
+        SELECT
+            o.sale_date                        AS saleDate,
+            COUNT(DISTINCT o.id)               AS saleCount,
+            ROUND(SUM(i.amount), 2)            AS saleAmount,
+            ROUND(SUM(i.cost_amount), 2)       AS costAmount,
+            ROUND(SUM(i.amount) - SUM(i.cost_amount), 2) AS grossProfit
+        FROM jxc_sale_order o
+        JOIN jxc_sale_order_item i ON i.sale_id = o.id
+        <where>
+            AND o.status != '2'
+            <if test="beginDate != null and beginDate != ''">
+                AND o.sale_date &gt;= #{beginDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND o.sale_date &lt;= #{endDate}
+            </if>
+        </where>
+        GROUP BY o.sale_date
+        ORDER BY o.sale_date DESC
+    </select>
+
+    <!-- 商品销售排行（按销售额降序） -->
+    <select id="selectSaleByProduct" resultType="java.util.LinkedHashMap">
+        SELECT
+            p.product_code                     AS productCode,
+            p.product_name                     AS productName,
+            p.unit                             AS unit,
+            ROUND(SUM(i.quantity), 4)          AS saleQty,
+            ROUND(SUM(i.amount), 2)            AS saleAmount,
+            ROUND(SUM(i.cost_amount), 2)       AS costAmount,
+            ROUND(SUM(i.amount) - SUM(i.cost_amount), 2) AS grossProfit
+        FROM jxc_sale_order_item i
+        JOIN jxc_sale_order o ON i.sale_id = o.id
+        LEFT JOIN jxc_product p ON i.product_id = p.id
+        <where>
+            AND o.status != '2'
+            <if test="beginDate != null and beginDate != ''">
+                AND o.sale_date &gt;= #{beginDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND o.sale_date &lt;= #{endDate}
+            </if>
+        </where>
+        GROUP BY p.id, p.product_code, p.product_name, p.unit
+        ORDER BY saleAmount DESC
+    </select>
+
+    <!-- 低库存预警（按商品聚合现存量，低于或等于预警下限；含零库存） -->
+    <select id="selectLowStock" resultType="java.util.LinkedHashMap">
+        SELECT
+            p.id                               AS productId,
+            p.product_code                     AS productCode,
+            p.product_name                     AS productName,
+            p.unit                             AS unit,
+            p.stock_min                        AS stockMin,
+            p.stock_max                        AS stockMax,
+            IFNULL(ROUND(SUM(s.quantity), 4), 0) AS stockQty,
+            CASE
+                WHEN IFNULL(SUM(s.quantity), 0) &lt;= 0 THEN '已缺货'
+                ELSE '低于下限'
+            END                                AS warnType
+        FROM jxc_product p
+        LEFT JOIN jxc_stock s ON s.product_id = p.id
+        WHERE p.status = '0'
+        GROUP BY p.id, p.product_code, p.product_name, p.unit, p.stock_min, p.stock_max
+        HAVING IFNULL(SUM(s.quantity), 0) &lt;= p.stock_min
+        ORDER BY stockQty ASC
+    </select>
+
+    <!-- 临期预警（批次维度：days 天内到期且仍有库存；已过期为负数同样列出） -->
+    <select id="selectNearExpiry" resultType="java.util.LinkedHashMap">
+        SELECT
+            p.product_code                     AS productCode,
+            p.product_name                     AS productName,
+            p.unit                             AS unit,
+            s.batch_no                         AS batchNo,
+            s.expiry_date                      AS expiryDate,
+            DATEDIFF(s.expiry_date, CURDATE()) AS daysToExpiry,
+            s.quantity                         AS quantity,
+            ROUND(s.quantity * s.cost_price, 2) AS stockAmount
+        FROM jxc_stock s
+        LEFT JOIN jxc_product p ON s.product_id = p.id
+        WHERE s.quantity &gt; 0
+          AND s.expiry_date IS NOT NULL
+          AND DATEDIFF(s.expiry_date, CURDATE()) &lt;= #{days}
+        ORDER BY s.expiry_date ASC
+    </select>
+
+</mapper>
