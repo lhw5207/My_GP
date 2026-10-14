@@ -42,7 +42,31 @@ RuoYi-Vue（后端）自带的 velocity 模板生成 Vue2 + Element UI 页面；
 - 生成器配置已更新（`ruoyi-generator/generator.yml`：author=vivi、packageName=com.ruoyi.jxc），后续导入自动带默认值
 - 登录验证码已临时关闭（`sys_config: sys.account.captchaEnabled=false`），答辩前恢复为 true
 
-## 三、模块清单（已落地代码）
+## 四、批次二：基础资料三模块（商品分类/供应商/会员）
+
+> 2026-10-14 下午追加 ｜ 状态：代码落位 + 编译验证全部通过（运行验证待下次启动环境）
+
+| 模块 | 接口前缀 | 菜单ID | 页面 | 验证 |
+|---|---|---|---|---|
+| 商品分类 JxcProductCategory | `/jxc/category` | 2007-2012 | `views/jxc/category/index.vue` | 后端编译 ✅ / vite 构建 ✅ |
+| 供应商 JxcSupplier | `/jxc/supplier` | 2013-2018 | `views/jxc/supplier/index.vue` | 后端编译 ✅ / vite 构建 ✅ |
+| 会员 JxcMember | `/jxc/member` | 2019-2024 | `views/jxc/member/index.vue` | 后端编译 ✅ / vite 构建 ✅ |
+
+**本次改进点**：
+1. 商品表单"商品分类"由数字输入升级为**下拉选择器**（对接 `GET /jxc/category/list`，打开弹窗时懒加载）
+2. 会员模块使用字典 `jxc_member_level`（普通/银卡/金卡）做等级展示与选择
+3. 所有页面补齐初始 `getList()` 调用（RuoYi-Vue3 `<script setup>` 规范：脚本末尾需显式调用 `getList()`，否则列表不加载——**重要经验，后续移植必查**）
+4. 菜单 SQL：`sql/jxc_menu_base.sql`（三模块菜单 + 按钮 + admin 授权）
+
+**验证记录**：
+- `mvn package -DskipTests` → BUILD SUCCESS（19.7s，7 模块全部编译通过）
+- `npm run build:prod`（Vite 生产构建）→ 成功产出 dist，4 个业务页面编译无错误
+
+**遗留说明**：本次按用户要求"先停环境"，三个新模块的**运行态验证**（接口 CRUD 实测、页面渲染）留待下次启动环境后执行（后端 8080 / 前端 80 / Redis 6379）。
+
+---
+
+## 五、模块清单（已落地代码）
 
 | 文件 | 位置 |
 |---|---|

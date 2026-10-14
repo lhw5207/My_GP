@@ -140,7 +140,14 @@
             <el-row>
                <el-col :span="12">
                   <el-form-item label="商品分类" prop="categoryId">
-                     <el-input-number v-model="form.categoryId" :min="1" :precision="0" :controls="false" style="width: 100%" placeholder="请输入分类ID（待分类模块后改为选择器）" />
+                     <el-select v-model="form.categoryId" placeholder="请选择商品分类" style="width: 100%">
+                        <el-option
+                           v-for="c in categoryOptions"
+                           :key="c.id"
+                           :label="c.categoryName"
+                           :value="c.id"
+                        />
+                     </el-select>
                   </el-form-item>
                </el-col>
                <el-col :span="12">
@@ -229,9 +236,20 @@
 
 <script setup name="JxcProduct">
 import { listProduct, getProduct, delProduct, addProduct, updateProduct } from "@/api/jxc/product"
+import { listCategory } from "@/api/jxc/category"
 
 const { proxy } = getCurrentInstance()
 const { sys_normal_disable } = useDict("sys_normal_disable")
+
+const categoryOptions = ref([])
+
+/** 加载商品分类下拉数据 */
+function loadCategoryOptions() {
+  if (categoryOptions.value.length) return
+  listCategory({ pageNum: 1, pageSize: 500, status: "0" }).then(response => {
+    categoryOptions.value = response.rows || []
+  })
+}
 
 const productList = ref([])
 const open = ref(false)
@@ -328,6 +346,7 @@ function handleSelectionChange(selection) {
 /** 新增按钮操作 */
 function handleAdd() {
   reset()
+  loadCategoryOptions()
   open.value = true
   title.value = "添加商品信息"
 }
@@ -335,6 +354,7 @@ function handleAdd() {
 /** 修改按钮操作 */
 function handleUpdate(row) {
   reset()
+  loadCategoryOptions()
   const id = row.id || ids.value
   getProduct(id).then(response => {
     form.value = response.data
@@ -381,4 +401,6 @@ function handleExport() {
     ...queryParams.value
   }, `jxc_product_${new Date().getTime()}.xlsx`)
 }
+
+getList()
 </script>
