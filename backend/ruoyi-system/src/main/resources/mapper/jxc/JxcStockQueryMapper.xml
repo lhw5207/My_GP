@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.jxc.mapper.JxcStockQueryMapper">
+
+    <!-- 现货存量查询（联表商品；days_to_expiry 为距到期天数，负数表示已过期） -->
+    <select id="selectStockList" resultType="java.util.LinkedHashMap">
+        SELECT
+            s.id,
+            s.product_id      AS productId,
+            p.product_code    AS productCode,
+            p.product_name    AS productName,
+            p.unit            AS unit,
+            p.stock_min       AS stockMin,
+            s.batch_no        AS batchNo,
+            s.production_date AS productionDate,
+            s.expiry_date     AS expiryDate,
+            CASE WHEN s.expiry_date IS NULL THEN NULL ELSE DATEDIFF(s.expiry_date, CURDATE()) END AS daysToExpiry,
+            s.quantity        AS quantity,
+            s.cost_price      AS costPrice,
+            ROUND(s.quantity * s.cost_price, 2) AS stockAmount,
+            s.update_time     AS updateTime
+        FROM jxc_stock s
+        LEFT JOIN jxc_product p ON s.product_id = p.id
+        <where>
+            <if test='includeZero == null or includeZero != "1"'>
+                AND s.quantity &gt; 0
+            </if>
+            <if test="productId != null">
+                AND s.product_id = #{productId}
+            </if>
+            <if test="batchNo != null and batchNo != ''">
+                AND s.batch_no LIKE CONCAT('%', #{batchNo}, '%')
+            </if>
+            <if test="nearExpiryDays != null and nearExpiryDays >= 0">
+                AND s.expiry_date IS NOT NULL
+                AND DATEDIFF(s.expiry_date, CURDATE()) &lt;= #{nearExpiryDays}
+            </if>
+        </where>
+        ORDER BY p.product_code, (s.expiry_date IS NULL), s.expiry_date, s.id
+    </select>
+
+    <!-- 库存流水台账（联表商品） -->
+    <select id="selectStockFlowList" resultType="java.util.LinkedHashMap">
+        SELECT
+            f.id,
+            f.product_id   AS productId,
+            p.product_code AS productCode,
+            p.product_name AS productName,
+            p.unit         AS unit,
+            f.batch_no     AS batchNo,
+            f.flow_type    AS flowType,
+            f.biz_type     AS bizType,
+            f.biz_no       AS bizNo,
+            f.biz_item_id  AS bizItemId,
+            f.change_qty   AS changeQty,
+            f.balance_qty  AS balanceQty,
+            f.create_by    AS createBy,
+            f.create_time  AS createTime,
+            f.remark       AS remark
+        FROM jxc_stock_flow f
+        LEFT JOIN jxc_product p ON f.product_id = p.id
+        <where>
+            <if test="productId != null">
+                AND f.product_id = #{productId}
+            </if>
+            <if test="batchNo != null and batchNo != ''">
+                AND f.batch_no LIKE CONCAT('%', #{batchNo}, '%')
+            </if>
+            <if test="bizType != null and bizType != ''">
+                AND f.biz_type = #{bizType}
+            </if>
+            <if test="bizNo != null and bizNo != ''">
+                AND f.biz_no LIKE CONCAT('%', #{bizNo}, '%')
+            </if>
+        </where>
+        ORDER BY f.id DESC
+    </select>
+
+</mapper>
