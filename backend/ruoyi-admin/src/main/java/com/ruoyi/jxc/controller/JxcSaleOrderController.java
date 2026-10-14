@@ -1,0 +1,104 @@
+package com.ruoyi.jxc.controller;
+
+import java.util.List;
+import javax.servlet.http.HttpServletResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.ruoyi.common.annotation.Log;
+import com.ruoyi.common.core.controller.BaseController;
+import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.jxc.domain.JxcSaleOrder;
+import com.ruoyi.jxc.service.IJxcSaleOrderService;
+import com.ruoyi.common.utils.poi.ExcelUtil;
+import com.ruoyi.common.core.page.TableDataInfo;
+
+/**
+ * 销售单Controller
+ * 
+ * @author vivi
+ * @date 2026-10-14
+ */
+@RestController
+@RequestMapping("/jxc/sale_order")
+public class JxcSaleOrderController extends BaseController
+{
+    @Autowired
+    private IJxcSaleOrderService jxcSaleOrderService;
+
+    /**
+     * 查询销售单列表
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:list')")
+    @GetMapping("/list")
+    public TableDataInfo list(JxcSaleOrder jxcSaleOrder)
+    {
+        startPage();
+        List<JxcSaleOrder> list = jxcSaleOrderService.selectJxcSaleOrderList(jxcSaleOrder);
+        return getDataTable(list);
+    }
+
+    /**
+     * 导出销售单列表
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:export')")
+    @Log(title = "销售单", businessType = BusinessType.EXPORT)
+    @PostMapping("/export")
+    public void export(HttpServletResponse response, JxcSaleOrder jxcSaleOrder)
+    {
+        List<JxcSaleOrder> list = jxcSaleOrderService.selectJxcSaleOrderList(jxcSaleOrder);
+        ExcelUtil<JxcSaleOrder> util = new ExcelUtil<JxcSaleOrder>(JxcSaleOrder.class);
+        util.exportExcel(response, list, "销售单数据");
+    }
+
+    /**
+     * 获取销售单详细信息
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:query')")
+    @GetMapping(value = "/{id}")
+    public AjaxResult getInfo(@PathVariable("id") Long id)
+    {
+        return success(jxcSaleOrderService.selectJxcSaleOrderById(id));
+    }
+
+    /**
+     * 新增销售单
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:add')")
+    @Log(title = "销售单", businessType = BusinessType.INSERT)
+    @PostMapping
+    public AjaxResult add(@RequestBody JxcSaleOrder jxcSaleOrder)
+    {
+        return toAjax(jxcSaleOrderService.insertJxcSaleOrder(jxcSaleOrder));
+    }
+
+    /**
+     * 修改销售单
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:edit')")
+    @Log(title = "销售单", businessType = BusinessType.UPDATE)
+    @PutMapping
+    public AjaxResult edit(@RequestBody JxcSaleOrder jxcSaleOrder)
+    {
+        return toAjax(jxcSaleOrderService.updateJxcSaleOrder(jxcSaleOrder));
+    }
+
+    /**
+     * 删除销售单
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:sale_order:remove')")
+    @Log(title = "销售单", businessType = BusinessType.DELETE)
+	@DeleteMapping("/{ids}")
+    public AjaxResult remove(@PathVariable Long[] ids)
+    {
+        return toAjax(jxcSaleOrderService.deleteJxcSaleOrderByIds(ids));
+    }
+}

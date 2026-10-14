@@ -44,6 +44,12 @@ public interface JxcStockCoreMapper
                               @Param("batchNo") String batchNo);
 
     /**
+     * 查询商品的可用批次列表（FEFO 顺序：失效日期升序，无效期排最后）
+     * 返回字段：batchNo / quantity / costPrice / expiryDate
+     */
+    java.util.List<java.util.Map<String, Object>> selectFefoBatches(@Param("productId") Long productId);
+
+    /**
      * 写入库存流水（只增不改）
      * @param flowType 1入库 2出库
      * @param changeQty 变动数量（入正出负）

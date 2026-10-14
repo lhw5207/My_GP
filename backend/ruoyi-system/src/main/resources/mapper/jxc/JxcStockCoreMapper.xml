@@ -35,6 +35,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         SELECT quantity FROM jxc_stock WHERE product_id = #{productId} AND batch_no = #{batchNo}
     </select>
 
+    <!-- 可用批次列表（FEFO：失效日期升序，无效期排最后） -->
+    <select id="selectFefoBatches" resultType="java.util.HashMap">
+        SELECT batch_no AS batchNo, quantity, cost_price AS costPrice, expiry_date AS expiryDate
+        FROM jxc_stock
+        WHERE product_id = #{productId} AND quantity &gt; 0
+        ORDER BY (expiry_date IS NULL), expiry_date ASC, id ASC
+    </select>
+
     <!-- 库存流水（只增不改） -->
     <insert id="insertStockFlow">
         INSERT INTO jxc_stock_flow
@@ -51,10 +59,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             (#{supplierId}, #{sourceNo}, #{sourceType}, #{amount}, 0.00, #{amount}, '0', #{operName}, sysdate(), #{remark})
     </insert>
 
-    <!-- 应收台账 -->
+    <!-- 应收台账（与应付对称：paid_amount 表示已收） -->
     <insert id="insertReceivable">
         INSERT INTO jxc_receivable
-            (member_id, source_no, source_type, amount, received_amount, balance, status, create_by, create_time, remark)
+            (member_id, source_no, source_type, amount, paid_amount, balance, status, create_by, create_time, remark)
         VALUES
             (#{memberId}, #{sourceNo}, #{sourceType}, #{amount}, 0.00, #{amount}, '0', #{operName}, sysdate(), #{remark})
     </insert>
