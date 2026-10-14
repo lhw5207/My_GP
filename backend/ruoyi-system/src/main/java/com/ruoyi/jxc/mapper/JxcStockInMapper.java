@@ -1,6 +1,7 @@
 package com.ruoyi.jxc.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 import com.ruoyi.jxc.domain.JxcStockIn;
 import com.ruoyi.jxc.domain.JxcStockInItem;
 
@@ -84,4 +85,29 @@ public interface JxcStockInMapper
      * @return 结果
      */
     public int deleteJxcStockInItemByInId(Long id);
+
+    // ==================== 采购订单回写（入库单审核时联动） ====================
+
+    /**
+     * 按订单号查询采购订单ID
+     */
+    public Long selectPurchaseOrderIdByNo(@Param("orderNo") String orderNo);
+
+    /**
+     * 回写订单明细已入库数量（received_qty += 本次入库量）
+     */
+    public int updateOrderItemReceivedQty(@Param("orderId") Long orderId,
+                                          @Param("productId") Long productId,
+                                          @Param("qty") java.math.BigDecimal qty);
+
+    /**
+     * 统计订单未完成明细行数（received_qty &lt; quantity 的行数）
+     */
+    public int countOrderUnfinishedItems(@Param("orderId") Long orderId);
+
+    /**
+     * 更新采购订单状态（2 部分执行 / 3 已执行）
+     */
+    public int updatePurchaseOrderStatus(@Param("orderId") Long orderId,
+                                         @Param("status") String status);
 }

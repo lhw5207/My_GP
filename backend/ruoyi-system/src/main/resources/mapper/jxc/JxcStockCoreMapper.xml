@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.jxc.mapper.JxcStockCoreMapper">
+
+    <!-- 现存量增加（批次维度 upsert；唯一键 product_id + batch_no） -->
+    <insert id="upsertStockQtyIncrease">
+        INSERT INTO jxc_stock
+            (product_id, batch_no, production_date, expiry_date, quantity, cost_price, create_by, create_time, update_by, update_time)
+        VALUES
+            (#{productId}, #{batchNo}, #{productionDate}, #{expiryDate}, #{quantity}, #{costPrice}, #{operName}, sysdate(), #{operName}, sysdate())
+        ON DUPLICATE KEY UPDATE
+            quantity        = quantity + #{quantity},
+            cost_price      = #{costPrice},
+            production_date = IFNULL(#{productionDate}, production_date),
+            expiry_date     = IFNULL(#{expiryDate}, expiry_date),
+            update_by       = #{operName},
+            update_time     = sysdate()
+    </insert>
+
+    <!-- 现存量原子扣减（quantity >= 扣减量 才生效，返回 0 即库存不足） -->
+    <update id="deductStockQty">
+        UPDATE jxc_stock
+        SET quantity    = quantity - #{quantity},
+            update_by   = #{operName},
+            update_time = sysdate()
+        WHERE product_id = #{productId}
+          AND batch_no   = #{batchNo}
+          AND quantity  &gt;= #{quantity}
+    </update>
+
+    <!-- 批次结存数量 -->
+    <select id="selectStockQty" resultType="java.math.BigDecimal">
+        SELECT quantity FROM jxc_stock WHERE product_id = #{productId} AND batch_no = #{batchNo}
+    </select>
+
+    <!-- 库存流水（只增不改） -->
+    <insert id="insertStockFlow">
+        INSERT INTO jxc_stock_flow
+            (product_id, batch_no, flow_type, biz_type, biz_id, biz_item_id, biz_no, change_qty, balance_qty, create_by, create_time, remark)
+        VALUES
+            (#{productId}, #{batchNo}, #{flowType}, #{bizType}, #{bizId}, #{bizItemId}, #{bizNo}, #{changeQty}, #{balanceQty}, #{operName}, sysdate(), #{remark})
+    </insert>
+
+    <!-- 应付台账 -->
+    <insert id="insertPayable">
+        INSERT INTO jxc_payable
+            (supplier_id, source_no, source_type, amount, paid_amount, balance, status, create_by, create_time, remark)
+        VALUES
+            (#{supplierId}, #{sourceNo}, #{sourceType}, #{amount}, 0.00, #{amount}, '0', #{operName}, sysdate(), #{remark})
+    </insert>
+
+    <!-- 应收台账 -->
+    <insert id="insertReceivable">
+        INSERT INTO jxc_receivable
+            (member_id, source_no, source_type, amount, received_amount, balance, status, create_by, create_time, remark)
+        VALUES
+            (#{memberId}, #{sourceNo}, #{sourceType}, #{amount}, 0.00, #{amount}, '0', #{operName}, sysdate(), #{remark})
+    </insert>
+
+</mapper>

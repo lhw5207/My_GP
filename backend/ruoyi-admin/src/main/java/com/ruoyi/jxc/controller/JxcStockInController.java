@@ -101,4 +101,15 @@ public class JxcStockInController extends BaseController
     {
         return toAjax(jxcStockInService.deleteJxcStockInByIds(ids));
     }
+
+    /**
+     * 审核采购入库单（审核即执行：库存增加 + 流水 + 应付 + 状态更新，同事务）
+     */
+    @PreAuthorize("@ss.hasPermi('jxc:stock_in:audit')")
+    @Log(title = "采购入库单", businessType = BusinessType.UPDATE)
+    @PutMapping("/audit/{id}")
+    public AjaxResult audit(@PathVariable("id") Long id)
+    {
+        return toAjax(jxcStockInService.auditJxcStockIn(id, getUsername()));
+    }
 }

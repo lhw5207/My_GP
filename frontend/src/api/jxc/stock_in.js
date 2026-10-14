@@ -42,3 +42,11 @@ export function delStock_in(id) {
     method: 'delete'
   })
 }
+
+// 审核采购入库单（审核即执行：库存+流水+应付+状态）
+export function auditStock_in(id) {
+  return request({
+    url: '/jxc/stock_in/audit/' + id,
+    method: 'put'
+  })
+}

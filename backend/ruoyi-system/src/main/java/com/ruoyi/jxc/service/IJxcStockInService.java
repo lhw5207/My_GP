@@ -58,4 +58,15 @@ public interface IJxcStockInService
      * @return 结果
      */
     public int deleteJxcStockInById(Long id);
+
+    /**
+     * 审核采购入库单（审核即执行）
+     * 同事务完成：现存量增加（批次 upsert）→ 库存流水（批次结存快照）→ 应付台账生成 → 单据状态更新
+     * 仅草稿态可审核；已审核/已作废单重复审核将被拒绝。
+     *
+     * @param id 采购入库单主键
+     * @param operName 操作人
+     * @return 结果
+     */
+    public int auditJxcStockIn(Long id, String operName);
 }

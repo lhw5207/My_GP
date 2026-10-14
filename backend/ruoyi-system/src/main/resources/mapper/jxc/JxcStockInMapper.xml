@@ -162,4 +162,29 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             ( #{item.id}, #{item.inId}, #{item.rowNo}, #{item.productId}, #{item.batchNo}, #{item.productionDate}, #{item.expiryDate}, #{item.quantity}, #{item.price}, #{item.amount}, #{item.sourceOrderId}, #{item.sourceOrderItemId}, #{item.createBy}, #{item.createTime}, #{item.updateBy}, #{item.updateTime}, #{item.remark})
         </foreach>
     </insert>
+    <!-- ==================== 采购订单回写（入库单审核时联动） ==================== -->
+
+    <!-- 按订单号查询采购订单ID -->
+    <select id="selectPurchaseOrderIdByNo" resultType="java.lang.Long">
+        SELECT id FROM jxc_purchase_order WHERE order_no = #{orderNo} LIMIT 1
+    </select>
+
+    <!-- 回写订单明细已入库数量 -->
+    <update id="updateOrderItemReceivedQty">
+        UPDATE jxc_purchase_order_item
+        SET received_qty = received_qty + #{qty}
+        WHERE order_id = #{orderId} AND product_id = #{productId}
+    </update>
+
+    <!-- 统计订单未完成明细行数 -->
+    <select id="countOrderUnfinishedItems" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM jxc_purchase_order_item
+        WHERE order_id = #{orderId} AND received_qty &lt; quantity
+    </select>
+
+    <!-- 更新采购订单状态（2 部分执行 / 3 已执行） -->
+    <update id="updatePurchaseOrderStatus">
+        UPDATE jxc_purchase_order SET status = #{status}, update_time = sysdate() WHERE id = #{orderId}
+    </update>
+
 </mapper>

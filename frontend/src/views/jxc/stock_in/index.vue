@@ -85,6 +85,16 @@
           v-hasPermi="['jxc:stock_in:export']"
         >导出</el-button>
       </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="success"
+          plain
+          icon="Check"
+          :disabled="!selectedRow || selectedRow.status !== '0'"
+          @click="handleAudit(selectedRow)"
+          v-hasPermi="['jxc:stock_in:audit']"
+        >审核</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
@@ -114,10 +124,14 @@
         </template>
       </el-table-column>
       <el-table-column label="备注" align="center" prop="remark" />
-      <el-table-column label="操作" align="center" width="160" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="230" class-name="small-padding fixed-width">
         <template #default="scope">
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['jxc:stock_in:edit']">修改</el-button>
-          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['jxc:stock_in:remove']">删除</el-button>
+          <template v-if="scope.row.status === '0'">
+            <el-button link type="success" icon="Check" @click="handleAudit(scope.row)" v-hasPermi="['jxc:stock_in:audit']">审核</el-button>
+            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['jxc:stock_in:edit']">修改</el-button>
+            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['jxc:stock_in:remove']">删除</el-button>
+          </template>
+          <span v-else style="color: #909399; font-size: 12px;">已审核（纠错走红字/退货单）</span>
         </template>
       </el-table-column>
     </el-table>
@@ -257,7 +271,7 @@
 </template>
 
 <script setup name="Stock_in">
-import { listStock_in, getStock_in, delStock_in, addStock_in, updateStock_in } from "@/api/jxc/stock_in"
+import { listStock_in, getStock_in, delStock_in, addStock_in, updateStock_in, auditStock_in } from "@/api/jxc/stock_in"
 import { listSupplier } from "@/api/jxc/supplier"
 import { listProduct } from "@/api/jxc/product"
 
@@ -270,6 +284,7 @@ const open = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
 const ids = ref([])
+const selectedRow = ref(null)
 const checkedJxcStockInItem = ref([])
 const single = ref(true)
 const multiple = ref(true)
@@ -424,6 +439,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.id)
+  selectedRow.value = selection.length === 1 ? selection[0] : null
   single.value = selection.length != 1
   multiple.value = !selection.length
 }
@@ -498,6 +514,24 @@ function handleDelete(row) {
   }).then(() => {
     getList()
     proxy.$modal.msgSuccess("删除成功")
+  }).catch(() => {})
+}
+
+/** 审核按钮操作（审核即执行：库存增加 + 流水 + 应付 + 状态更新） */
+function handleAudit(row) {
+  if (!row || !row.id) {
+    proxy.$modal.msgWarning("请选择要审核的入库单")
+    return
+  }
+  if (row.status !== "0") {
+    proxy.$modal.msgWarning("仅草稿状态单据可审核")
+    return
+  }
+  proxy.$modal.confirm('审核后库存将立即增加并生成应付账款，是否确认审核单据"' + row.inNo + '"？').then(function() {
+    return auditStock_in(row.id)
+  }).then(() => {
+    proxy.$modal.msgSuccess("审核成功，库存与应付已联动更新")
+    getList()
   }).catch(() => {})
 }
 
