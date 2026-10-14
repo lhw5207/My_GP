@@ -57,4 +57,41 @@ public interface ISysNoticeService
      * @return 结果
      */
     public int deleteNoticeByIds(Long[] noticeIds);
+
+    // ==================== 公告已读（适配 Vue3 前端的消息通知功能） ====================
+
+    /**
+     * 查询用户已读的公告ID列表
+     *
+     * @param userId 用户ID
+     * @return 已读公告ID集合
+     */
+    public java.util.List<Long> selectReadNoticeIdsByUserId(Long userId);
+
+    /**
+     * 标记公告已读（幂等）
+     *
+     * @param noticeId 公告ID
+     * @param userId 用户ID
+     * @return 结果
+     */
+    public int markNoticeRead(Long noticeId, Long userId);
+
+    /**
+     * 批量标记公告已读（ids 逗号分隔字符串）
+     *
+     * @param ids 公告ID串（如 "1,2,3"）
+     * @param userId 用户ID
+     * @return 成功标记数
+     */
+    public int markNoticeReadAll(String ids, Long userId);
+
+    /**
+     * 查询公告已读用户列表
+     *
+     * @param noticeId 公告ID
+     * @param searchValue 搜索值
+     * @return 已读用户集合
+     */
+    public java.util.List<java.util.Map<String, Object>> selectNoticeReadUsers(Long noticeId, String searchValue);
 }

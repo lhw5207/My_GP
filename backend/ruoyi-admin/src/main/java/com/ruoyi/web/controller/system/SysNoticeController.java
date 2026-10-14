@@ -1,6 +1,9 @@
 package com.ruoyi.web.controller.system;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -87,5 +90,77 @@ public class SysNoticeController extends BaseController
     public AjaxResult remove(@PathVariable Long[] noticeIds)
     {
         return toAjax(noticeService.deleteNoticeByIds(noticeIds));
+    }
+
+    /**
+     * 首页顶部公告列表（适配 Vue3 前端消息铃铛）
+     * 返回：前 3 条未关闭公告 + 当前用户已读状态 + 未读总数
+     */
+    @GetMapping("/listTop")
+    public AjaxResult listTop()
+    {
+        SysNotice query = new SysNotice();
+        query.setStatus("0");
+        List<SysNotice> list = noticeService.selectNoticeList(query);
+        List<Long> readIds = noticeService.selectReadNoticeIdsByUserId(getUserId());
+        List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+        int unreadCount = 0;
+        for (SysNotice notice : list)
+        {
+            boolean isRead = readIds.contains(notice.getNoticeId());
+            if (!isRead)
+            {
+                unreadCount++;
+            }
+            if (result.size() < 3)
+            {
+                Map<String, Object> item = new HashMap<String, Object>();
+                item.put("noticeId", notice.getNoticeId());
+                item.put("noticeTitle", notice.getNoticeTitle());
+                item.put("noticeType", notice.getNoticeType());
+                item.put("createTime", notice.getCreateTime());
+                item.put("isRead", isRead);
+                result.add(item);
+            }
+        }
+        AjaxResult ajax = AjaxResult.success(result);
+        ajax.put("unreadCount", unreadCount);
+        return ajax;
+    }
+
+    /**
+     * 标记公告为已读（幂等）
+     */
+    @PostMapping("/markRead")
+    public AjaxResult markRead(Long noticeId)
+    {
+        if (noticeId == null)
+        {
+            return success();
+        }
+        noticeService.markNoticeRead(noticeId, getUserId());
+        return success();
+    }
+
+    /**
+     * 批量标记公告已读（ids 为逗号分隔字符串）
+     */
+    @PostMapping("/markReadAll")
+    public AjaxResult markReadAll(String ids)
+    {
+        noticeService.markNoticeReadAll(ids, getUserId());
+        return success();
+    }
+
+    /**
+     * 查询公告已读用户列表
+     */
+    @PreAuthorize("@ss.hasPermi('system:notice:list')")
+    @GetMapping("/readUsers/list")
+    public TableDataInfo readUsers(Long noticeId, String searchValue)
+    {
+        startPage();
+        List<Map<String, Object>> list = noticeService.selectNoticeReadUsers(noticeId, searchValue);
+        return getDataTable(list);
     }
 }

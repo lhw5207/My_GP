@@ -89,4 +89,55 @@ public class SysNoticeServiceImpl implements ISysNoticeService
     {
         return noticeMapper.deleteNoticeByIds(noticeIds);
     }
+
+    // ==================== 公告已读（适配 Vue3 前端的消息通知功能） ====================
+
+    /**
+     * 查询用户已读的公告ID列表
+     */
+    @Override
+    public List<Long> selectReadNoticeIdsByUserId(Long userId)
+    {
+        return noticeMapper.selectReadNoticeIdsByUserId(userId);
+    }
+
+    /**
+     * 标记公告已读（幂等）
+     */
+    @Override
+    public int markNoticeRead(Long noticeId, Long userId)
+    {
+        return noticeMapper.insertNoticeRead(noticeId, userId);
+    }
+
+    /**
+     * 批量标记公告已读（ids 逗号分隔字符串）
+     */
+    @Override
+    public int markNoticeReadAll(String ids, Long userId)
+    {
+        if (ids == null || ids.trim().isEmpty())
+        {
+            return 0;
+        }
+        int count = 0;
+        for (String id : ids.split(","))
+        {
+            if (id == null || id.trim().isEmpty())
+            {
+                continue;
+            }
+            count += noticeMapper.insertNoticeRead(Long.parseLong(id.trim()), userId);
+        }
+        return count;
+    }
+
+    /**
+     * 查询公告已读用户列表
+     */
+    @Override
+    public java.util.List<java.util.Map<String, Object>> selectNoticeReadUsers(Long noticeId, String searchValue)
+    {
+        return noticeMapper.selectNoticeReadUsers(noticeId, searchValue);
+    }
 }

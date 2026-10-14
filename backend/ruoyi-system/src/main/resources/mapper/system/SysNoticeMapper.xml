@@ -85,5 +85,40 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{noticeId}
         </foreach>
     </delete>
-    
+
+    <!-- ==================== 公告已读（适配 Vue3 前端的消息通知功能） ==================== -->
+
+    <!-- 用户已读的公告ID列表 -->
+    <select id="selectReadNoticeIdsByUserId" resultType="java.lang.Long">
+        select notice_id from sys_notice_read where user_id = #{userId}
+    </select>
+
+    <!-- 标记已读（幂等：不存在才插入，重复标记不产生重复记录） -->
+    <insert id="insertNoticeRead">
+        insert into sys_notice_read(notice_id, user_id, read_time)
+        select #{noticeId}, #{userId}, sysdate() from dual
+        where not exists (
+            select 1 from sys_notice_read where notice_id = #{noticeId} and user_id = #{userId}
+        )
+    </insert>
+
+    <!-- 公告已读用户列表 -->
+    <select id="selectNoticeReadUsers" resultType="java.util.LinkedHashMap">
+        select u.user_name as userName,
+               u.nick_name as nickName,
+               d.dept_name as deptName,
+               u.phonenumber as phonenumber,
+               r.read_time as readTime
+        from sys_notice_read r
+        left join sys_user u on r.user_id = u.user_id
+        left join sys_dept d on u.dept_id = d.dept_id
+        where r.notice_id = #{noticeId}
+        <if test="searchValue != null and searchValue != ''">
+            and (u.user_name like concat('%', #{searchValue}, '%')
+                 or u.nick_name like concat('%', #{searchValue}, '%')
+                 or u.phonenumber like concat('%', #{searchValue}, '%'))
+        </if>
+        order by r.read_time desc
+    </select>
+
 </mapper>
