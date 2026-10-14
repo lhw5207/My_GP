@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.jxc.mapper.JxcStockInMapper">
+    
+    <resultMap type="JxcStockIn" id="JxcStockInResult">
+        <result property="id"    column="id"    />
+        <result property="inNo"    column="in_no"    />
+        <result property="sourceType"    column="source_type"    />
+        <result property="sourceNo"    column="source_no"    />
+        <result property="supplierId"    column="supplier_id"    />
+        <result property="inDate"    column="in_date"    />
+        <result property="totalAmount"    column="total_amount"    />
+        <result property="status"    column="status"    />
+        <result property="auditBy"    column="audit_by"    />
+        <result property="auditTime"    column="audit_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <resultMap id="JxcStockInJxcStockInItemResult" type="JxcStockIn" extends="JxcStockInResult">
+        <collection property="jxcStockInItemList" ofType="JxcStockInItem" column="id" select="selectJxcStockInItemList" />
+    </resultMap>
+
+    <resultMap type="JxcStockInItem" id="JxcStockInItemResult">
+        <result property="id"    column="id"    />
+        <result property="inId"    column="in_id"    />
+        <result property="rowNo"    column="row_no"    />
+        <result property="productId"    column="product_id"    />
+        <result property="batchNo"    column="batch_no"    />
+        <result property="productionDate"    column="production_date"    />
+        <result property="expiryDate"    column="expiry_date"    />
+        <result property="quantity"    column="quantity"    />
+        <result property="price"    column="price"    />
+        <result property="amount"    column="amount"    />
+        <result property="sourceOrderId"    column="source_order_id"    />
+        <result property="sourceOrderItemId"    column="source_order_item_id"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectJxcStockInVo">
+        select id, in_no, source_type, source_no, supplier_id, in_date, total_amount, status, audit_by, audit_time, create_by, create_time, update_by, update_time, remark from jxc_stock_in
+    </sql>
+
+    <select id="selectJxcStockInList" parameterType="JxcStockIn" resultMap="JxcStockInResult">
+        <include refid="selectJxcStockInVo"/>
+        <where>  
+            <if test="inNo != null  and inNo != ''"> and in_no = #{inNo}</if>
+            <if test="sourceType != null  and sourceType != ''"> and source_type = #{sourceType}</if>
+            <if test="sourceNo != null  and sourceNo != ''"> and source_no = #{sourceNo}</if>
+            <if test="supplierId != null "> and supplier_id = #{supplierId}</if>
+            <if test="inDate != null "> and in_date = #{inDate}</if>
+            <if test="totalAmount != null "> and total_amount = #{totalAmount}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="auditBy != null  and auditBy != ''"> and audit_by = #{auditBy}</if>
+            <if test="auditTime != null "> and audit_time = #{auditTime}</if>
+        </where>
+    </select>
+    
+    <select id="selectJxcStockInById" parameterType="Long" resultMap="JxcStockInJxcStockInItemResult">
+        select id, in_no, source_type, source_no, supplier_id, in_date, total_amount, status, audit_by, audit_time, create_by, create_time, update_by, update_time, remark
+        from jxc_stock_in
+        where id = #{id}
+    </select>
+
+    <select id="selectJxcStockInItemList" resultMap="JxcStockInItemResult">
+        select id, in_id, row_no, product_id, batch_no, production_date, expiry_date, quantity, price, amount, source_order_id, source_order_item_id, create_by, create_time, update_by, update_time, remark
+        from jxc_stock_in_item
+        where in_id = #{in_id}
+    </select>
+
+    <insert id="insertJxcStockIn" parameterType="JxcStockIn" useGeneratedKeys="true" keyProperty="id">
+        insert into jxc_stock_in
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="inNo != null and inNo != ''">in_no,</if>
+            <if test="sourceType != null and sourceType != ''">source_type,</if>
+            <if test="sourceNo != null">source_no,</if>
+            <if test="supplierId != null">supplier_id,</if>
+            <if test="inDate != null">in_date,</if>
+            <if test="totalAmount != null">total_amount,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="auditBy != null">audit_by,</if>
+            <if test="auditTime != null">audit_time,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="inNo != null and inNo != ''">#{inNo},</if>
+            <if test="sourceType != null and sourceType != ''">#{sourceType},</if>
+            <if test="sourceNo != null">#{sourceNo},</if>
+            <if test="supplierId != null">#{supplierId},</if>
+            <if test="inDate != null">#{inDate},</if>
+            <if test="totalAmount != null">#{totalAmount},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="auditBy != null">#{auditBy},</if>
+            <if test="auditTime != null">#{auditTime},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateJxcStockIn" parameterType="JxcStockIn">
+        update jxc_stock_in
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="inNo != null and inNo != ''">in_no = #{inNo},</if>
+            <if test="sourceType != null and sourceType != ''">source_type = #{sourceType},</if>
+            <if test="sourceNo != null">source_no = #{sourceNo},</if>
+            <if test="supplierId != null">supplier_id = #{supplierId},</if>
+            <if test="inDate != null">in_date = #{inDate},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="auditBy != null">audit_by = #{auditBy},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteJxcStockInById" parameterType="Long">
+        delete from jxc_stock_in where id = #{id}
+    </delete>
+
+    <delete id="deleteJxcStockInByIds" parameterType="String">
+        delete from jxc_stock_in where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    
+    <delete id="deleteJxcStockInItemByInIds" parameterType="String">
+        delete from jxc_stock_in_item where in_id in 
+        <foreach item="inId" collection="array" open="(" separator="," close=")">
+            #{inId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteJxcStockInItemByInId" parameterType="Long">
+        delete from jxc_stock_in_item where in_id = #{inId}
+    </delete>
+
+    <insert id="batchJxcStockInItem">
+        insert into jxc_stock_in_item( id, in_id, row_no, product_id, batch_no, production_date, expiry_date, quantity, price, amount, source_order_id, source_order_item_id, create_by, create_time, update_by, update_time, remark) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            ( #{item.id}, #{item.inId}, #{item.rowNo}, #{item.productId}, #{item.batchNo}, #{item.productionDate}, #{item.expiryDate}, #{item.quantity}, #{item.price}, #{item.amount}, #{item.sourceOrderId}, #{item.sourceOrderItemId}, #{item.createBy}, #{item.createTime}, #{item.updateBy}, #{item.updateTime}, #{item.remark})
+        </foreach>
+    </insert>
+</mapper>
