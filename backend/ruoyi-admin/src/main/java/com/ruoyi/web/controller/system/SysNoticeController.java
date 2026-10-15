@@ -1,6 +1,7 @@
 package com.ruoyi.web.controller.system;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,6 +103,23 @@ public class SysNoticeController extends BaseController
         SysNotice query = new SysNotice();
         query.setStatus("0");
         List<SysNotice> list = noticeService.selectNoticeList(query);
+        // 最新公告优先（createTime 倒序，null 安全；次级 noticeId 倒序）
+        list.sort((a, b) -> {
+            Date t1 = a.getCreateTime();
+            Date t2 = b.getCreateTime();
+            int cmp;
+            if (t1 == null && t2 == null) { cmp = 0; }
+            else if (t1 == null) { cmp = 1; }
+            else if (t2 == null) { cmp = -1; }
+            else { cmp = t2.compareTo(t1); }
+            if (cmp != 0) { return cmp; }
+            Long id1 = a.getNoticeId();
+            Long id2 = b.getNoticeId();
+            if (id1 == null && id2 == null) { return 0; }
+            if (id1 == null) { return 1; }
+            if (id2 == null) { return -1; }
+            return id2.compareTo(id1);
+        });
         List<Long> readIds = noticeService.selectReadNoticeIdsByUserId(getUserId());
         List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
         int unreadCount = 0;
