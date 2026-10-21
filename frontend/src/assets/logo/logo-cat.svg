@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="商超管理系统">
+  <defs>
+    <linearGradient id="catBadge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFB65C"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 橙色渐变圆角徽标底：深色/浅色侧边栏下都能保证对比度 -->
+  <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#catBadge)"/>
+
+  <!-- 猫耳 -->
+  <path d="M19.8 25.6 L20.4 13.6 L30.4 20.6 Z" fill="#FFFFFF"/>
+  <path d="M44.2 25.6 L43.6 13.6 L33.6 20.6 Z" fill="#FFFFFF"/>
+  <path d="M22.6 23.6 L22.9 17.2 L28.2 20.9 Z" fill="#FFC9B3"/>
+  <path d="M41.4 23.6 L41.1 17.2 L35.8 20.9 Z" fill="#FFC9B3"/>
+
+  <!-- 猫脸 -->
+  <ellipse cx="32" cy="36" rx="15.4" ry="13.8" fill="#FFFFFF"/>
+
+  <!-- 眼睛 -->
+  <ellipse cx="25.9" cy="34.2" rx="2.4" ry="2.9" fill="#3B2A1A"/>
+  <ellipse cx="38.1" cy="34.2" rx="2.4" ry="2.9" fill="#3B2A1A"/>
+
+  <!-- 鼻子与嘴 -->
+  <path d="M30.7 39.3 L33.3 39.3 L32 41.3 Z" fill="#3B2A1A"/>
+  <path d="M32 41.3 q-2.3 2.7 -4.5 0.5" fill="none" stroke="#3B2A1A" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M32 41.3 q2.3 2.7 4.5 0.5" fill="none" stroke="#3B2A1A" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- 胡须（细而不糊：32px 下仍能读出猫的特征） -->
+  <g stroke="#3B2A1A" stroke-width="1.5" stroke-linecap="round" opacity="0.55">
+    <path d="M17.6 34.4 L23.2 35.4"/>
+    <path d="M17.8 39.2 L23.3 38.2"/>
+    <path d="M46.4 34.4 L40.8 35.4"/>
+    <path d="M46.2 39.2 L40.7 38.2"/>
+  </g>
+</svg>
