@@ -17,7 +17,7 @@
 | **前端** | 本文 §3、§7 | `src/views/jxc/**` 现有页面 | `src/views/jxc/**`、`views/jxcHome` | Vue3 页面 |
 | **QA** | 本文 §8 风险 + 验证表 | `docs/项目进度跟踪.md` 第九节验收报告 | 不改源码 | 测试用例/报告 |
 
-**所有角色的共同前提**：`docs/项目进度跟踪.md` 是**进度唯一来源（SSOT）**，任何交付完成后必须更新它的「更新记录」。
+**所有角色的共同前提**：`docs/项目进度跟踪.md` 是**进度唯一来源（SSOT）**，任何交付完成后必须更新它的「更新记录」；同时必须在 `docs/会话变更记录.md` 末尾**追加本轮文件级变更记录**（代码/数据库/依赖/验证/待办）——两者缺一不可，完成后再推送 Git。
 
 ---
 
@@ -195,7 +195,7 @@ curl -s --noproxy '*' -H "Authorization: Bearer $TOKEN" "http://localhost:8080/j
 1. **事务层单写者**：同一时刻只允许 1 个 Agent 修改 `JxcStockCoreMapper` / 库存·往来相关 Service，其余 Agent 只读。
 2. **文件级分区**：前端 Agent 只碰 `src/views/jxc/**` 与 `src/api/jxc/**`；文档 Agent 只碰 `docs/**`；后端 Agent 只碰 `com.ruoyi.jxc.*`。三者可并行。
 3. **提交粒度**：一次改动 = 一个语义提交；提交信息格式 `type(scope): 描述`（`feat/fix/docs/refactor`），**消息内不要用英文双引号**。
-4. **提交前必做**：`git -C repo pull --rebase`（或 `E:\Git`）→ 更新 `docs/项目进度跟踪.md` → 跑 §8 验证。
+4. **提交前必做**：`git -C repo pull --rebase`（或 `E:\Git`）→ 更新 `docs/项目进度跟踪.md` → `docs/会话变更记录.md` 追加本轮变更记录 → 跑 §8 验证。
 5. **冲突处理**：`repo/` 与 `E:\Git` 是同源副本，**不要两边各提交一次**；约定以 `repo/` 为主工作副本，`E:\Git` 作备份镜像定期同步。
 6. **禁止静默改基座**：任何 `ruoyi-framework`、`src/utils`、`permission.js` 的改动，必须先在对话里说明原因与影响面。
 
