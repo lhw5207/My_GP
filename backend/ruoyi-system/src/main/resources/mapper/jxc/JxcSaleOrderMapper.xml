@@ -81,6 +81,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where sale_id = #{sale_id}
     </select>
 
+    <select id="countTodaySaleOrders" resultType="int">
+        select count(*) from jxc_sale_order where sale_no like concat('XS', #{today}, '%')
+    </select>
+
     <insert id="insertJxcSaleOrder" parameterType="JxcSaleOrder" useGeneratedKeys="true" keyProperty="id">
         insert into jxc_sale_order
         <trim prefix="(" suffix=")" suffixOverrides=",">

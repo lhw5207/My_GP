@@ -1,6 +1,7 @@
 package com.ruoyi.jxc.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 import com.ruoyi.jxc.domain.JxcSaleOrder;
 import com.ruoyi.jxc.domain.JxcSaleOrderItem;
 
@@ -79,9 +80,17 @@ public interface JxcSaleOrderMapper
 
     /**
      * 通过销售单主键删除销售单明细信息
-     * 
+     *
      * @param id 销售单ID
      * @return 结果
      */
     public int deleteJxcSaleOrderItemBySaleId(Long id);
+
+    /**
+     * 统计当日已生成的销售单数（自动单号流水用）
+     *
+     * @param today 当日日期串（yyyyMMdd）
+     * @return 当日单数（含手工单号，保证流水连续）
+     */
+    public int countTodaySaleOrders(@Param("today") String today);
 }

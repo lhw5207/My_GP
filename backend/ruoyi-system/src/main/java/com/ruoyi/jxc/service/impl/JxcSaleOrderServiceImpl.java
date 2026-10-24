@@ -81,6 +81,12 @@ public class JxcSaleOrderServiceImpl implements IJxcSaleOrderService
             throw new ServiceException("销售单无明细，不可保存");
         }
 
+        // 单号缺省自动生成（前台收银场景；与手工单号兼容，极端并发冲突由 sale_no 唯一键兜底）
+        if (StringUtils.isEmpty(jxcSaleOrder.getSaleNo()))
+        {
+            jxcSaleOrder.setSaleNo(generateSaleNo());
+        }
+
         // ① FEFO 拆批（只读试算；实际扣减在插入后进行，扣减失败整单回滚）
         List<JxcSaleOrderItem> expanded = new ArrayList<JxcSaleOrderItem>();
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -259,8 +265,18 @@ public class JxcSaleOrderServiceImpl implements IJxcSaleOrderService
     }
 
     /**
+     * 生成销售单号：XS + yyyyMMdd + 3位流水（当日已有单数+1，含手工单号保证流水连续）
+     */
+    private String generateSaleNo()
+    {
+        String today = DateUtils.dateTimeNow("yyyyMMdd");
+        int seq = jxcSaleOrderMapper.countTodaySaleOrders(today) + 1;
+        return "XS" + today + String.format("%03d", seq);
+    }
+
+    /**
      * 新增销售单明细信息
-     * 
+     *
      * @param jxcSaleOrder 销售单对象
      */
     public void insertJxcSaleOrderItem(JxcSaleOrder jxcSaleOrder)

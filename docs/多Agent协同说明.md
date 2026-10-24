@@ -2,7 +2,7 @@
 
 > **读者**：将要接管本项目、或与本项目并行开发的 Agent / 模型。
 > **目标**：读完这一份，能准确判断「该读哪个文件、能改哪段代码、改完怎么验证、什么不能碰」。
-> **生成时间**：2026-10-24 ｜ **实测基线**：26,522 个文件 / 55 张表 / 19 个业务模块 / 8 条事务链
+> **生成时间**：2026-10-24 ｜ **实测基线**：26,522 个文件 / 55 张表 / 21 个业务模块 / 8 条事务链（2026-10-24 下午起新增前台收银 + AI 经营日报）
 > **最短版**：先看根目录 `AGENTS.md`；本文是它的展开与依据。
 
 ---
@@ -34,6 +34,10 @@ flowchart LR
   Q[Quartz 调度] -->|每日 08:00 job#100| T[JxcTask.nearExpiryWarn]
   T --> DB
   T --> N[站内公告 sys_notice]
+  Q -->|每日 08:30 job#101| A[JxcTask.aiDailyReport]
+  A -->|复用报表 Mapper| DB
+  A -->|失败降级模板| L[智谱 GLM API<br/>glm-4-flash · sys_config 配置]
+  A --> N
 ```
 
 **分层事实**（务必遵守，不要跨层调用）：
@@ -43,10 +47,10 @@ flowchart LR
 
 ---
 
-## 三、核心模块职责（18 个业务页）
+## 三、核心模块职责（19 个业务页）
 
-> 后端 Controller 实测坐标：`RuoYi-Vue/ruoyi-admin/src/main/java/com/ruoyi/jxc/controller/`（14 个）
-> 前端页面：`RuoYi-Vue3/src/views/jxc/`（15 个目录）+ `src/views/jxcHome`（首页）
+> 后端 Controller 实测坐标：`RuoYi-Vue/ruoyi-admin/src/main/java/com/ruoyi/jxc/controller/`（15 个）
+> 前端页面：`RuoYi-Vue3/src/views/jxc/`（16 个目录）+ `src/views/jxcHome`（首页）
 
 | # | 页面 | 路由 | Controller | 主要表 | 关键行为 |
 |---|---|---|---|---|---|
@@ -58,6 +62,7 @@ flowchart LR
 | 6 | 采购入库 | `/purchase/stock_in` | `JxcStockInController` | `jxc_stock_in(+item)` | **审核即执行**（链①） |
 | 7 | 采购退货 | `/purchase/purchase_return` | `JxcPurchaseReturnController` | `jxc_purchase_return(+item)` | 应付红冲（负数台账） |
 | 8 | 销售开单 POS | `/sale/sale_order` | `JxcSaleOrderController` | `jxc_sale_order(+item)` | **保存即生效** + FEFO 拆批 |
+| 8a | **前台收银** | `/sale/cashier` | `JxcCashierController` | 复用 `jxc_sale_order(+item)` | 扫码/搜索加购 + 找零 + **自动单号**；委托链②，权限独立 `jxc:cashier:*` |
 | 9 | 销售退货 | `/sale/sale_return` | `JxcSaleReturnController` | `jxc_sale_return(+item)` | 原批次回增 + 成本还原 |
 | 10 | 库存查询 | `/stock/list` | `JxcStockQueryController` | `jxc_stock` | **只读**，含临期/低库存筛选 |
 | 11 | 库存流水 | `/stock/stock_flow/list` | `JxcStockQueryController` | `jxc_stock_flow` | **只读**，全链路追溯账本 |
@@ -68,7 +73,8 @@ flowchart LR
 | 16 | 应收台账 | `/finance/*` | `JxcFinanceController` | `jxc_receivable` | 会员挂账产生 |
 | 17 | 销售统计/畅销榜 | `/report/sale_report` | `JxcReportController` | 聚合 `jxc_sale_order(+item)` | 含毛利（基于成本快照） |
 | 18 | 库存预警 | `/report/warning_report` | `JxcReportController` | 聚合 `jxc_stock`/`jxc_product` | 低库存 + 临期 |
-| — | 首页 | `/index` | — | — | `views/jxcHome`：欢迎 + 6 快捷卡 |
+| 19 | **AI 经营日报**（无独立页，产出走公告） | — | `JxcTask.aiDailyReport`（job#101） | 复用报表 Mapper + `sys_notice` | 大模型分析 + 失败降级模板；配置在 sys_config `jxc.ai.*` |
+| — | 首页 | `/index` | — | — | `views/jxcHome`：欢迎 + 7 快捷卡 |
 
 **24 张 jxc 业务表**（分 5 组）：
 - 基础资料 4：`jxc_product`、`jxc_product_category`、`jxc_supplier`、`jxc_member`
@@ -93,6 +99,7 @@ flowchart LR
 | ⑧ 流水追溯 | 全系统 | `jxc_stock_flow` 是唯一账本：现存量 = Σ 流水变动 | stock, stock_flow | 对账 4/4 一致（验收口径） |
 
 > **改这 8 条链的前提**：必须读懂 `JxcStockCoreMapper.java` + `.xml`；改完必须跑 §8 的对应验证。
+> 补充（2026-10-24）：**前台收银复用链②**（`JxcCashierController` 委托 `insertJxcSaleOrder`，不改事务逻辑）；**AI 经营日报不在事务链上**（只读查询 + 写公告，失败自动降级）。
 
 ---
 
@@ -101,7 +108,10 @@ flowchart LR
 | 能力 | 文件 |
 |---|---|
 | 库存核心（upsert/原子扣减/流水/应付应收写入） | `RuoYi-Vue/ruoyi-system/src/main/java/com/ruoyi/jxc/mapper/JxcStockCoreMapper.java`<br>`.../resources/mapper/jxc/JxcStockCoreMapper.xml` |
-| 临期预警定时任务 | `RuoYi-Vue/ruoyi-quartz/src/main/java/com/ruoyi/quartz/task/JxcTask.java` |
+| 临期预警 + AI 经营日报定时任务 | `RuoYi-Vue/ruoyi-quartz/src/main/java/com/ruoyi/quartz/task/JxcTask.java`（nearExpiryWarn / aiDailyReport，job#100/#101） |
+| 大模型 HTTP 客户端（OpenAI 兼容 + Bearer 头） | `RuoYi-Vue/ruoyi-system/src/main/java/com/ruoyi/jxc/util/JxcAiClient.java` |
+| 前台收银（商品定位/结算委托） | `RuoYi-Vue/ruoyi-admin/.../jxc/controller/JxcCashierController.java` + `RuoYi-Vue3/src/views/jxc/cashier/index.vue` |
+| 销售单号自动生成（XS+日期+流水） | `JxcSaleOrderServiceImpl.generateSaleNo`（saleNo 为空时触发，开单页手工单号兼容） |
 | 只读库存/流水查询 | `.../jxc/controller/JxcStockQueryController.java` + `JxcStockQueryMapper.xml` |
 | 菜单与授权数据 | `sql/jxc_menu_*.sql`（10 个），运行时以 `sys_menu` 为准 |
 | 前端首页（改造后） | `RuoYi-Vue3/src/views/jxcHome/index.vue` |

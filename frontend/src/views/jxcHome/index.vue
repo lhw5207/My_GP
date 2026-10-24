@@ -18,7 +18,7 @@
 
     <!-- 快捷入口 -->
     <el-row :gutter="16" class="entry-row">
-      <el-col v-for="item in entries" :key="item.path" :xs="24" :sm="12" :md="8">
+      <el-col v-for="item in entries" :key="item.path" :xs="24" :sm="12" :md="6">
         <el-card class="entry-card" shadow="hover" @click="go(item.path)">
           <div class="entry-head">
             <span class="entry-icon">
@@ -63,6 +63,7 @@ const today = new Date().toLocaleDateString('zh-CN', {
 })
 
 const entries = [
+  { title: '前台收银', desc: '扫码/搜索加购，自动单号，找零结算即扣库存', icon: 'skill', path: '/sale/cashier' },
   { title: '采购入库', desc: '审核即执行：现存量、库存流水、应付台账同事务联动', icon: 'shopping', path: '/purchase/stock_in' },
   { title: '销售开单', desc: 'FEFO 近效期先出，自动拆批并快照成本', icon: 'money', path: '/sale/sale_order' },
   { title: '库存盘点', desc: '盘盈生成入库单、盘亏生成出库单，差异可追溯', icon: 'table', path: '/stock/stock_check' },
