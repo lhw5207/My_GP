@@ -115,7 +115,19 @@
             v-hasPermi="['jxc:cashier:add']"
             @click="handleSubmit"
           >结算并生效（Enter 加购，本按钮出单）</el-button>
-          <div class="settle-tip">保存即生效：FEFO 近效期先出，自动扣库存并快照成本；单号自动生成</div>
+          <el-button
+            size="large"
+            class="submit-btn"
+            v-hasPermi="['jxc:cashier:add']"
+            @click="openPayDialog('ALIPAY')"
+          >支付宝扫码收款（沙箱）</el-button>
+          <el-button
+            size="large"
+            class="submit-btn"
+            v-hasPermi="['jxc:cashier:add']"
+            @click="openPayDialog('WECHAT')"
+          >微信扫码收款（模拟）</el-button>
+          <div class="settle-tip">保存即生效：FEFO 近效期先出，自动扣库存并快照成本；单号自动生成；扫码支付到账后自动语音播报并结算</div>
         </el-card>
       </el-col>
     </el-row>
@@ -132,12 +144,37 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- 扫码收款挂单（到账后 SSE 广播 → 语音播报 + 自动结算） -->
+    <el-dialog v-model="payDialog.open" :title="payDialog.channel === 'ALIPAY' ? '支付宝收款（沙箱）' : '微信收款（适配层模拟）'" width="400px" append-to-body @close="payDialog.outTradeNo = null">
+      <div class="pay-dialog">
+        <div class="pay-amount">¥ {{ formatAmount(payDialog.amount) }}</div>
+        <div class="pay-no">挂单号：{{ payDialog.outTradeNo }}</div>
+        <div v-if="payDialog.qrDataUrl" class="pay-qr">
+          <img :src="payDialog.qrDataUrl" alt="收款码" />
+        </div>
+        <div v-else class="pay-qr pay-loading">收款码生成中…</div>
+        <div class="pay-tip" v-if="payDialog.channel === 'ALIPAY'">
+          请用「支付宝沙箱钱包App」扫码支付；到账后自动播报并结算
+        </div>
+        <div class="pay-tip" v-else>
+          微信通道为适配层模拟（个人无沙箱资质）；点下方按钮模拟顾客完成支付
+        </div>
+        <el-alert v-if="payDialog.channel === 'ALIPAY' && payDialog.notifyReady === false"
+          type="warning" :closable="false" show-icon
+          title="未配置回调外网地址（参数 jxc.pay.notify.baseUrl），支付后收不到到账通知" />
+        <el-button v-if="payDialog.channel === 'WECHAT'" type="success" size="large" class="mock-btn"
+          @click="handleMockPay">模拟微信到账（自动播报+结算）</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="Cashier">
+import QRCode from 'qrcode'
 import { findCashierProduct, submitCashierOrder } from "@/api/jxc/cashier"
 import { listMember } from "@/api/jxc/member"
+import { createPayQrcode, mockPayNotify } from "@/api/jxc/pay"
 
 const { proxy } = getCurrentInstance()
 const { jxc_pay_type } = useDict("jxc_pay_type")
@@ -154,6 +191,15 @@ const receivedTouched = ref(false)
 const submitting = ref(false)
 const pickerOpen = ref(false)
 const pickerList = ref([])
+const payDialog = reactive({
+  open: false,
+  channel: "ALIPAY",
+  outTradeNo: null,
+  qrDataUrl: null,
+  amount: 0,
+  notifyReady: true
+})
+let payEs = null
 
 /** 行金额 */
 function rowAmount(row) {
@@ -321,8 +367,92 @@ function loadMemberOptions() {
   })
 }
 
+/** ===================== 扫码收款（挂单 → SSE 到账 → 播报+自动结算） ===================== */
+
+/** 生成收款码挂单（ALIPAY 沙箱真实码 / WECHAT 适配层占位码） */
+function openPayDialog(channel) {
+  if (!cart.value.length) {
+    proxy.$modal.msgWarning("购物车为空，请先加购商品")
+    return
+  }
+  if (actualAmount.value <= 0) {
+    proxy.$modal.msgWarning("应收金额必须大于 0")
+    return
+  }
+  createPayQrcode({ channel, amount: actualAmount.value }).then(response => {
+    const d = response.data || {}
+    payDialog.channel = channel
+    payDialog.outTradeNo = d.outTradeNo
+    payDialog.amount = actualAmount.value
+    payDialog.notifyReady = d.notifyReady !== false
+    payDialog.qrDataUrl = null
+    payDialog.open = true
+    QRCode.toDataURL(d.qrCode || d.outTradeNo, { width: 220, margin: 1 }).then(url => {
+      payDialog.qrDataUrl = url
+    })
+  })
+}
+
+/** 微信适配层：模拟顾客完成支付（触发同一条到账广播管线） */
+function handleMockPay() {
+  if (!payDialog.outTradeNo) return
+  mockPayNotify({ outTradeNo: payDialog.outTradeNo, amount: payDialog.amount }).then(() => {
+    // 实际播报与自动结算由 SSE 广播统一驱动（与真实到账同一条链路）
+  })
+}
+
+/** 订阅到账广播（SSE 长连接，断线 5 秒自动重连） */
+function connectPaySse() {
+  if (payEs) return
+  try {
+    payEs = new EventSource((import.meta.env.VITE_APP_BASE_API || '/dev-api') + '/jxc/pay/subscribe')
+    payEs.addEventListener('pay', e => {
+      try { onPayReceived(JSON.parse(e.data)) } catch (err) { /* 忽略坏消息 */ }
+    })
+    payEs.onerror = () => {
+      if (payEs) payEs.close()
+      payEs = null
+      setTimeout(connectPaySse, 5000)
+    }
+  } catch (e) {
+    payEs = null
+  }
+}
+
+/** 到账处理：语音播报 + 命中当前挂单则自动结算 */
+function onPayReceived(d) {
+  const label = d.channel === 'ALIPAY' ? '支付宝' : '微信'
+  speak(`${label}到账 ${d.amount} 元`)
+  proxy.$modal.msgSuccess(`${label}到账 ${formatAmount(d.amount)} 元（挂单 ${d.outTradeNo}）`)
+  if (payDialog.open && payDialog.outTradeNo && d.outTradeNo === payDialog.outTradeNo) {
+    const amount = Number(d.amount) || 0
+    received.value = Math.min(amount, actualAmount.value)
+    payDialog.open = false
+    payDialog.outTradeNo = null
+    handleSubmit()
+  }
+}
+
+/** 语音播报（浏览器中文 TTS；Edge/Chrome 内置 zh-CN 声音） */
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = 'zh-CN'
+    utter.rate = 1
+    window.speechSynthesis.speak(utter)
+  } catch (e) {
+    /* 无 TTS 能力时仅弹窗提示 */
+  }
+}
+
+onUnmounted(() => {
+  if (payEs) { payEs.close(); payEs = null }
+})
+
 loadMemberOptions()
 focusScan()
+connectPaySse()
 </script>
 
 <style lang="scss" scoped>
@@ -439,6 +569,54 @@ focusScan()
 
   .picker-table {
     cursor: pointer;
+  }
+}
+
+.pay-dialog {
+  text-align: center;
+
+  .pay-amount {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--el-color-success);
+  }
+
+  .pay-no {
+    margin: 4px 0 12px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .pay-qr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 230px;
+
+    img {
+      width: 220px;
+      height: 220px;
+    }
+
+    &.pay-loading {
+      color: var(--el-text-color-secondary);
+    }
+  }
+
+  .pay-tip {
+    margin: 10px 0 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
+  }
+
+  .mock-btn {
+    width: 100%;
+  }
+
+  .el-alert {
+    margin-bottom: 12px;
+    text-align: left;
   }
 }
 </style>

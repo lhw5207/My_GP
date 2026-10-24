@@ -2,7 +2,7 @@
 
 > **读者**：将要接管本项目、或与本项目并行开发的 Agent / 模型。
 > **目标**：读完这一份，能准确判断「该读哪个文件、能改哪段代码、改完怎么验证、什么不能碰」。
-> **生成时间**：2026-10-24 ｜ **实测基线**：26,522 个文件 / 55 张表 / 21 个业务模块 / 8 条事务链（2026-10-24 下午起新增前台收银 + AI 经营日报）
+> **生成时间**：2026-10-24 ｜ **实测基线**：26,522 个文件 / 56 张表 / 22 个业务模块 / 8 条事务链（2026-10-24 下午起新增前台收银 + AI 经营日报 + 扫码收款到账广播）
 > **最短版**：先看根目录 `AGENTS.md`；本文是它的展开与依据。
 
 ---
@@ -49,7 +49,7 @@ flowchart LR
 
 ## 三、核心模块职责（19 个业务页）
 
-> 后端 Controller 实测坐标：`RuoYi-Vue/ruoyi-admin/src/main/java/com/ruoyi/jxc/controller/`（15 个）
+> 后端 Controller 实测坐标：`RuoYi-Vue/ruoyi-admin/src/main/java/com/ruoyi/jxc/controller/`（16 个）
 > 前端页面：`RuoYi-Vue3/src/views/jxc/`（16 个目录）+ `src/views/jxcHome`（首页）
 
 | # | 页面 | 路由 | Controller | 主要表 | 关键行为 |
@@ -74,14 +74,16 @@ flowchart LR
 | 17 | 销售统计/畅销榜 | `/report/sale_report` | `JxcReportController` | 聚合 `jxc_sale_order(+item)` | 含毛利（基于成本快照） |
 | 18 | 库存预警 | `/report/warning_report` | `JxcReportController` | 聚合 `jxc_stock`/`jxc_product` | 低库存 + 临期 |
 | 19 | **AI 经营日报**（无独立页，产出走公告） | — | `JxcTask.aiDailyReport`（job#101） | 复用报表 Mapper + `sys_notice` | 大模型分析 + 失败降级模板；配置在 sys_config `jxc.ai.*` |
-| — | 首页 | `/index` | — | — | `views/jxcHome`：欢迎 + 7 快捷卡 |
+| 20 | **扫码收款与到账广播**（收银台内嵌，无独立菜单） | — | `JxcPayController` + `JxcPayBroadcaster`(SSE) | `jxc_pay_notify`（第25张jxc表） | 支付宝沙箱真实回调+验签 / 微信适配层模拟；到账语音播报+自动结算；配置 `jxc.pay.*` |
+| — | 首页 | `/index` | — | — | `views/jxcHome`：欢迎 + 7 快捷卡 + 到账播报订阅 |
 
-**24 张 jxc 业务表**（分 5 组）：
+**25 张 jxc 业务表**（分 6 组）：
 - 基础资料 4：`jxc_product`、`jxc_product_category`、`jxc_supplier`、`jxc_member`
 - 采购 6：`jxc_purchase_order(+item)`、`jxc_stock_in(+item)`、`jxc_purchase_return(+item)`
 - 销售 4：`jxc_sale_order(+item)`、`jxc_sale_return(+item)`
 - 库存 6：`jxc_stock`、`jxc_stock_flow`、`jxc_stock_check(+item)`、`jxc_stock_out(+item)`
 - 往来 4：`jxc_payable`、`jxc_receivable`、`jxc_payment(+item)`
+- 支付 1：`jxc_pay_notify`（到账流水，out_trade_no 唯一键幂等）
 
 ---
 
@@ -111,6 +113,7 @@ flowchart LR
 | 临期预警 + AI 经营日报定时任务 | `RuoYi-Vue/ruoyi-quartz/src/main/java/com/ruoyi/quartz/task/JxcTask.java`（nearExpiryWarn / aiDailyReport，job#100/#101） |
 | 大模型 HTTP 客户端（OpenAI 兼容 + Bearer 头） | `RuoYi-Vue/ruoyi-system/src/main/java/com/ruoyi/jxc/util/JxcAiClient.java` |
 | 前台收银（商品定位/结算委托） | `RuoYi-Vue/ruoyi-admin/.../jxc/controller/JxcCashierController.java` + `RuoYi-Vue3/src/views/jxc/cashier/index.vue` |
+| 扫码收款与到账广播 | `RuoYi-Vue/ruoyi-admin/.../jxc/controller/JxcPayController.java` + `.../jxc/pay/JxcPayBroadcaster.java`（SSE）+ `ruoyi-system/.../jxc/service/impl/JxcPayServiceImpl.java`（沙箱 precreate/验签/幂等） |
 | 销售单号自动生成（XS+日期+流水） | `JxcSaleOrderServiceImpl.generateSaleNo`（saleNo 为空时触发，开单页手工单号兼容） |
 | 只读库存/流水查询 | `.../jxc/controller/JxcStockQueryController.java` + `JxcStockQueryMapper.xml` |
 | 菜单与授权数据 | `sql/jxc_menu_*.sql`（10 个），运行时以 `sys_menu` 为准 |

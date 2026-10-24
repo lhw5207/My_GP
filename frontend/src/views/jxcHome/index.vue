@@ -52,6 +52,7 @@
 import useUserStore from '@/store/modules/user'
 
 const router = useRouter()
+const { proxy } = getCurrentInstance()
 const userStore = useUserStore()
 
 const nickName = computed(() => userStore.nickName || userStore.name || '管理员')
@@ -86,6 +87,46 @@ const chains = [
 function go(path) {
   router.push(path)
 }
+
+/** 到账广播订阅（首页挂机播报，等同店内语音盒子；断线 5 秒自动重连） */
+let payEs = null
+function connectPaySse() {
+  if (payEs) return
+  try {
+    payEs = new EventSource((import.meta.env.VITE_APP_BASE_API || '/dev-api') + '/jxc/pay/subscribe')
+    payEs.addEventListener('pay', e => {
+      try {
+        const d = JSON.parse(e.data)
+        const label = d.channel === 'ALIPAY' ? '支付宝' : '微信'
+        speak(`${label}到账 ${d.amount} 元`)
+        proxy.$modal.msgSuccess(`${label}到账 ${d.amount} 元（挂单 ${d.outTradeNo}）`)
+      } catch (err) { /* 忽略坏消息 */ }
+    })
+    payEs.onerror = () => {
+      if (payEs) payEs.close()
+      payEs = null
+      setTimeout(connectPaySse, 5000)
+    }
+  } catch (e) {
+    payEs = null
+  }
+}
+
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = 'zh-CN'
+    utter.rate = 1
+    window.speechSynthesis.speak(utter)
+  } catch (e) { /* 无 TTS 能力时仅弹窗提示 */ }
+}
+
+onUnmounted(() => {
+  if (payEs) { payEs.close(); payEs = null }
+})
+
+connectPaySse()
 </script>
 
 <style lang="scss" scoped>

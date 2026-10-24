@@ -23,6 +23,13 @@
             <artifactId>ruoyi-common</artifactId>
         </dependency>
 
+        <!-- 支付宝开放平台 SDK（当面付沙箱：预下单 + 异步通知 RSA2 验签，JDK8 兼容） -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.39.282.ALL</version>
+        </dependency>
+
     </dependencies>
 
 </project>

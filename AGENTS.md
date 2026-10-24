@@ -1,7 +1,7 @@
 # AGENTS.md · 商超进销存管理系统（毕设）
 
 > **给任何 Agent / 模型的最短上手路径。** 详细版见 `docs/多Agent协同说明.md`；项目全貌见 `docs/项目交接文档.md`。
-> 位置：`D:\Graduation_project` ｜ 状态：**开发 100% 完成**（21 模块 / 8 条事务链 / 55 张表；10-24 新增前台收银 + AI 经营日报），剩余为论文、测试文档、答辩脚本、AI Key 配置
+> 位置：`D:\Graduation_project` ｜ 状态：**开发 100% 完成**（22 模块 / 8 条事务链 / 56 张表；10-24 新增前台收银 + AI 经营日报 + 扫码收款到账广播），剩余为论文、测试文档、答辩脚本、AI Key/支付宝沙箱配置
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | `RuoYi-Vue/` | 后端（Maven 多模块，JDK8）。业务代码在 `com.ruoyi.jxc` | ✅ 业务包 / ⚠️ 基座 |
 | `RuoYi-Vue3/` | 前端（Vue3 + Vite + Element Plus），业务页在 `src/views/jxc/**` | ✅ 业务页 / ⚠️ 基座 |
-| `sql/` | 17 个脚本：建表 45KB + 演示数据 + 11 个菜单授权 + 菜单隐藏 + AI 配置/任务 | ✅ 追加，勿改已执行 |
+| `sql/` | 18 个脚本：建表 + 演示数据 + 11 个菜单授权 + 菜单隐藏 + AI 配置/任务 + 支付初始化 | ✅ 追加，勿改已执行 |
 | `docs/` | 交接文档、进度台账、功能取舍、迁移清单、多 Agent 说明 | ✅ |
 | `redis/` | Windows 免安装 Redis 5.0.14.1（47MB） | ❌ 只运行 |
 | `codegen/` | 代码生成器输出留档（zip 冗余） | ✅ 仅参考 |
@@ -27,7 +27,7 @@
 |---|---|---|
 | 后端 | RuoYi-Vue **3.9.1** + Spring Boot 2.5.15 + 原生 MyBatis，**JDK8**（`D:\Dev\Java\jdk8`） | **禁止升级到 3.9.2+（需 JDK17）** |
 | 前端 | RuoYi-Vue3，Vue 3.5 + Vite 6 + Element Plus 2.13 | 页面统一 `<script setup>` + `#default` 插槽 |
-| 数据库 | MySQL 8.0.42，库 **`ry_jxc`**（55 表 = jxc_ 24 + sys_ 18 + qrtz_ 11 + gen_ 2） | utf8mb4 |
+| 数据库 | MySQL 8.0.42，库 **`ry_jxc`**（56 表 = jxc_ 25 + sys_ 18 + qrtz_ 11 + gen_ 2） | utf8mb4 |
 | 缓存 | Redis **5.0.14.1**（免安装，6379） | 无 rdb/aof，重启清空 |
 
 ## 4. 启动（顺序敏感）
