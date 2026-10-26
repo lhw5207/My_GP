@@ -1,0 +1,93 @@
+# 商超进销存管理系统 · Docker Compose 一键部署
+# 手册：docs/Docker容器化执行手册.md（P3 产出）
+# 端口错峰：MySQL 宿主 3308（原计划 3307，被本机另一 mysqld 实例占用而改）、前端 8081；
+#           后端保持 8080 对外（cpolar 隧道依赖）——宿主后端与容器后端不能同时起。
+# 用法：cd docker && docker compose up -d --build
+name: jxc-stack
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: jxc-mysql
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: ry_jxc
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    ports:
+      - "3308:3306"   # 宿主 3308 → 容器 3306；仅调试用，业务链路走内部网络
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro   # 首次启动自动导入 56 表全量 dump
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    networks:
+      - jxc-net
+
+  redis:
+    image: redis:5.0.14-alpine
+    container_name: jxc-redis
+    restart: unless-stopped
+    # 无持久化（与 Windows 开发环境现状一致：重启清空登录态/缓存无碍）
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks:
+      - jxc-net
+
+  backend:
+    image: jxc-backend:latest
+    build:
+      context: ./backend
+      additional_contexts:
+        jar: ../RuoYi-Vue/ruoyi-admin/target   # 宿主机 mvn package 产物（先停宿主 8080 再打包）
+    container_name: jxc-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      TZ: Asia/Shanghai
+      # jar 不重打包：全部用环境变量覆盖 application-druid.yml / application.yml
+      SPRING_DATASOURCE_DRUID_MASTER_URL: "jdbc:mysql://mysql:3306/ry_jxc?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8"
+      SPRING_DATASOURCE_DRUID_MASTER_USERNAME: root
+      SPRING_DATASOURCE_DRUID_MASTER_PASSWORD: "123456"
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      RUOYI_PROFILE: /ruoyi/uploadPath
+    ports:
+      - "8080:8080"   # 对外供 cpolar 支付回调隧道；宿主后端需先停
+    volumes:
+      - upload-path:/ruoyi/uploadPath
+    networks:
+      - jxc-net
+
+  frontend:
+    image: jxc-frontend:latest
+    build:
+      context: ./frontend                              # 主上下文：Dockerfile + nginx.conf
+      additional_contexts:
+        dist: ../RuoYi-Vue3/dist                       # 宿主机 npm run build:prod 产物
+    container_name: jxc-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+    networks:
+      - jxc-net
+
+volumes:
+  mysql-data:
+  upload-path:
+
+networks:
+  jxc-net:
+    driver: bridge
