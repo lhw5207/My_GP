@@ -19,7 +19,7 @@
 | `redis/` | Windows 免安装 Redis 5.0.14.1（47MB） | ❌ 只运行 |
 | `codegen/` | 代码生成器输出留档（zip 冗余） | ✅ 仅参考 |
 | `backup/` | `ry_jxc_20261024.sql`（55 表全量 dump，237KB） | ❌ |
-| `repo/` | Git 仓库副本（与 `E:\Git` 同源同 remote） | ⚠️ 提交前先 pull |
+| `repo/` | **Git 仓库（唯一本地工作副本）**，同步远程 origin/main（E:\Git 旧镜像已于 10-26 删除） | ⚠️ 提交前先 pull |
 
 ## 3. 技术栈（版本不要动）
 
@@ -103,6 +103,6 @@ curl -s --noproxy '*' http://localhost/ | grep -o '<title>.*</title>'           
 ## 10. 协作约定
 
 1. **改完必须更新两份文档**：`docs/项目进度跟踪.md` 的「更新记录」（里程碑状态）+ `docs/会话变更记录.md` 末尾追加本轮变更记录（文件级清单：代码/数据库/依赖/验证/待办），再推送 Git
-2. 代码改动同步到 `repo/`（或 `E:\Git`）并 `git push origin main`；**commit 消息内不要用英文双引号**
+2. 代码改动同步到 `repo/` 并 `git push origin main`；**commit 消息内不要用英文双引号**
 3. 事务链相关改动（库存/台账）必须跑第 6 节验证 + 对应拒单场景
 4. 一次只让一个 Agent 改后端事务层，避免 `JxcStockCoreMapper` 冲突

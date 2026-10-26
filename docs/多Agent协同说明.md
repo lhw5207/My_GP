@@ -137,7 +137,7 @@ flowchart LR
 | 7 | `D:\ruoyi\uploadPath` | 52 KB | 用户头像、上传附件 | 运行时上传（`application.yml` 的 `profile`） | 后端自动读写，无需手动操作 | **在项目目录之外**，只复制项目会漏；换盘才需改 `profile` |
 | 8 | `D:\home\ruoyi\logs` | 497 KB | 业务日志（info/error，按日滚动） | logback `log.path=/home/ruoyi/logs` | 直接看 `sys-error.log` 排障 | 路径**无盘符**，跟随当前盘（D: 下即 `D:\home\ruoyi\logs`）；不入库不入 Git |
 | 9 | `codegen/` | 848 KB | 代码生成器输出留档（11 目录 + 11 zip） | RuoYi 代码生成器 | 参考已生成结构 | `*.zip` 与解压目录内容重复，属冗余中间产物 |
-| 10 | `repo/` | 13 MB | **Git 仓库副本**（含 `.git`，24 个提交） | 复制自 `E:\Git`，与 `git@github.com:lhw5207/My_GP.git` 同源 | `git -C repo status` / `git log -1` | 与 `E:\Git` **指向同一 remote**，两边都提交前先 `git pull`，避免分叉；迁移前已把未推送提交 `6255dce` 推上去 |
+| 10 | `repo/` | 13 MB | **Git 仓库（唯一本地副本）** | 与 `git@github.com:lhw5207/My_GP.git` 同源同步 | `git -C repo status` / `git log -1` | ⚠️ 旧备份镜像 `E:\Git` 已于 2026-10-26 删除（R6/R7），不要再引用；一切提交走 `repo/`，推送前先 `git pull --rebase` |
 | 11 | `AGENTS.md` + 本文 | — | Agent 上手说明 | 本次产出 | 直接读 | 根目录 `AGENTS.md` **不在 Git 仓库内**（repo 只含 backend/frontend/docs/sql） |
 
 ---
@@ -195,8 +195,8 @@ curl -s --noproxy '*' -H "Authorization: Bearer $TOKEN" "http://localhost:8080/j
 1. **事务层单写者**：同一时刻只允许 1 个 Agent 修改 `JxcStockCoreMapper` / 库存·往来相关 Service，其余 Agent 只读。
 2. **文件级分区**：前端 Agent 只碰 `src/views/jxc/**` 与 `src/api/jxc/**`；文档 Agent 只碰 `docs/**`；后端 Agent 只碰 `com.ruoyi.jxc.*`。三者可并行。
 3. **提交粒度**：一次改动 = 一个语义提交；提交信息格式 `type(scope): 描述`（`feat/fix/docs/refactor`），**消息内不要用英文双引号**。
-4. **提交前必做**：`git -C repo pull --rebase`（或 `E:\Git`）→ 更新 `docs/项目进度跟踪.md` → `docs/会话变更记录.md` 追加本轮变更记录 → 跑 §8 验证。
-5. **冲突处理**：`repo/` 与 `E:\Git` 是同源副本，**不要两边各提交一次**；约定以 `repo/` 为主工作副本，`E:\Git` 作备份镜像定期同步。
+4. **提交前必做**：`git -C repo pull --rebase` → 更新 `docs/项目进度跟踪.md` → `docs/会话变更记录.md` 追加本轮变更记录 → 跑 §8 验证。
+5. **仓库唯一性**：`repo/` 是**唯一本地 Git 工作副本**（旧备份镜像 `E:\Git` 已于 2026-10-26 经用户确认删除，其内容 6255dce 为远程历史祖先、无独有数据）；所有提交只走 `repo/`。
 6. **禁止静默改基座**：任何 `ruoyi-framework`、`src/utils`、`permission.js` 的改动，必须先在对话里说明原因与影响面。
 
 ---
