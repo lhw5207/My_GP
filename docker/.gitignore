@@ -1,2 +1,0 @@
-# 全量种子 dump 含演示/账号数据，不入 Git（重新生成命令见 docker/README.md 第四节）
-mysql/init/*.sql

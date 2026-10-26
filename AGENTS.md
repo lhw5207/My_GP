@@ -16,7 +16,6 @@
 | `RuoYi-Vue3/` | 前端（Vue3 + Vite + Element Plus），业务页在 `src/views/jxc/**` | ✅ 业务页 / ⚠️ 基座 |
 | `sql/` | 18 个脚本：建表 + 演示数据 + 11 个菜单授权 + 菜单隐藏 + AI 配置/任务 + 支付初始化 | ✅ 追加，勿改已执行 |
 | `docs/` | 交接文档、进度台账、功能取舍、迁移清单、多 Agent 说明 | ✅ |
-| `docker/` | **Docker 一键部署**（compose + 2 Dockerfile + nginx.conf + init dump；dump 不入 Git） | ✅ |
 | `redis/` | Windows 免安装 Redis 5.0.14.1（47MB） | ❌ 只运行 |
 | `codegen/` | 代码生成器输出留档（zip 冗余） | ✅ 仅参考 |
 | `backup/` | `ry_jxc_20261024.sql`（55 表全量 dump，237KB） | ❌ |
@@ -46,16 +45,6 @@ cd D:\Graduation_project\RuoYi-Vue3 && npm run dev     # 端口 80，代理到 8
 ```
 
 **停止**：前端 Ctrl+C；后端按 8080 的 PID `taskkill /PID <pid> /F`；Redis 关窗口。
-
-**Docker 一键启动**（与上面三件套二选一，均须先起 Docker Desktop；速查见 `docker/README.md`）：
-
-```bash
-# 启动：mysql(3308)+redis+backend(8080)+nginx(8081)，首次 1-3 分钟
-cd D:\Graduation_project\docker && docker compose up -d --build
-
-# 前端访问 http://localhost:8081 ｜ 停止（保留数据）：docker compose down
-# ⚠️ 与宿主后端同抢 8080：跑 compose 前先停宿主 8080，反之先 docker compose stop backend
-```
 
 ## 5. 构建
 
@@ -105,7 +94,6 @@ curl -s --noproxy '*' http://localhost/ | grep -o '<title>.*</title>'           
 | `docs/项目进度跟踪.md` | ⭐ 唯一进度台账（改完必须更新） |
 | `docs/会话变更记录.md` | ⭐ 每轮修改的文件级变更清单（改完必须追加，强制） |
 | `docs/用户待办清单.md` | ⭐ 用户人工动作项（Key/沙箱/验证码/答辩件）+ 项目状态快照 |
-| `docs/Docker容器化执行手册.md` | Docker 一键部署项目书（✅ 2026-10-26 已执行，8/8 验证通过） |
 | `docs/多Agent协同说明.md` | 架构 / 模块职责 / 事务链 / 中间件产物 / 协作约定 |
 | `docs/系统功能取舍说明.md` | 为什么有用户/角色/字典等基座功能（答辩口径） |
 | `docs/项目迁移清单.md` | 换盘/换机的文件迁移与配置调整 |
